@@ -11,8 +11,15 @@ export type BookResult = {
 export type Message = {
   id: string;
   sender: "user" | "bot";
-  type: "text" | "image" | "both";
+  type: "text" | "image" | "both" | "typing"; // 👈 ADD THIS
   content: string;
-  file?: File | null;
-  result?: BookResult | null;
+  file?: File;
+  result?: {
+    title?: string;
+    author?: string;
+    isbn?: string;
+    price?: number;
+    available?: boolean;
+    stock?: number;
+  };
 };

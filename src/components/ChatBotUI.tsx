@@ -10,8 +10,9 @@ export default function ChatBotUI() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 👋 Welcome message on mount
+  // Welcome message on mount
   useEffect(() => {
     setMessages([
       {
@@ -24,19 +25,32 @@ export default function ChatBotUI() {
     ]);
   }, []);
 
+  // Auto-scroll to bottom
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
   const handleSend = async (msg: Omit<Message, "id">) => {
+    if (loading) return; // 🛑 Prevent spam clicks
+
     const userMsg: Message = { ...msg, id: crypto.randomUUID() };
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
+    // Show fake typing bubble
+    const typingMsg: Message = {
+      id: "typing",
+      sender: "bot",
+      type: "typing",
+      content: "",
+    };
+    setMessages((prev) => [...prev, typingMsg]);
+
     try {
-      // ✅ Step 1: Get or create session ID
       let sessionId = localStorage.getItem("chat_session_id");
       if (!sessionId) {
         sessionId = crypto.randomUUID();
         localStorage.setItem("chat_session_id", sessionId);
-
-        // (Optional) notify backend
         await fetch("/api/session-init", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -44,24 +58,23 @@ export default function ChatBotUI() {
         });
       }
 
-      // ✅ Step 2: Build form data
       const formData = new FormData();
       formData.append("message", msg.content.trim());
       formData.append("sessionId", sessionId);
+      if (msg.file) formData.append("file", msg.file);
 
-      if (msg.file) {
-        formData.append("file", msg.file);
-      }
-
-      // ✅ Step 3: Send request
       const response = await fetch("http://localhost:4000/api/chat", {
         method: "POST",
         body: formData,
       });
 
       const data = await response.json();
-
       const replyText = data.replies?.[0]?.reply || "🤖 No response received.";
+
+      // Remove typing bubble before adding actual reply
+      setMessages((prev) =>
+        [...prev].filter((m) => m.id !== "typing")
+      );
 
       const botMsg: Message = {
         id: crypto.randomUUID(),
@@ -72,6 +85,11 @@ export default function ChatBotUI() {
 
       setMessages((prev) => [...prev, botMsg]);
     } catch (error) {
+      // Remove typing bubble
+      setMessages((prev) =>
+        [...prev].filter((m) => m.id !== "typing")
+      );
+
       setMessages((prev) => [
         ...prev,
         {
@@ -87,16 +105,22 @@ export default function ChatBotUI() {
   };
 
   return (
-    <div className="space-y-3 text-sm">
-      <div className="h-64 overflow-y-auto border rounded-md p-3 bg-gray-50 space-y-2 scroll-smooth">
+    <div className="flex flex-col h-full space-y-2 text-sm">
+      {/* Chat area */}
+      <div className="flex-1 overflow-y-auto rounded-lg p-3 bg-white dark:bg-zinc-900 scroll-smooth">
         {messages.map((msg) => (
           <ChatBubble key={msg.id} message={msg} />
         ))}
-        {loading && (
-          <p className="text-gray-400 text-xs italic">Bot is thinking...</p>
-        )}
+        <div ref={scrollRef} />
       </div>
-      <ChatInput onSend={handleSend} fileInputRef={fileInputRef} />
+
+      {/* Input */}
+      <div className="border-t pt-2 dark:border-white/10">
+        <ChatInput
+          onSend={handleSend}
+          fileInputRef={fileInputRef}
+        />
+      </div>
     </div>
   );
 }
