@@ -1,4 +1,3 @@
-// src\hooks\useClientInfo.ts
 // src/hooks/useClientInfo.ts
 "use client";
 
@@ -10,6 +9,8 @@ export function useClientInfo() {
     language?: string;
     screenWidth?: number;
     screenHeight?: number;
+    platform?: string;
+    timezone?: string;
   }>({});
 
   useEffect(() => {
@@ -18,6 +19,8 @@ export function useClientInfo() {
       language: navigator.language,
       screenWidth: window.innerWidth,
       screenHeight: window.innerHeight,
+      platform: navigator.platform,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
   }, []);
 

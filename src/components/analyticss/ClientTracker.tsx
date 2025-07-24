@@ -1,6 +1,6 @@
-// src\components\analyticss\ClientTracker.tsx
-// src/components/ClientTracker.tsx
+// src/components/analyticss/ClientTracker.tsx
 "use client";
+
 import { useClientInfo } from "@/hooks/useClientInfo";
 import { useEffect } from "react";
 
@@ -8,9 +8,14 @@ export default function ClientTracker() {
   const client = useClientInfo();
 
   useEffect(() => {
-    console.log("📲 Client Info:", client);
-    // You can also send this to an API endpoint if needed
+    if (!client.userAgent) return;
+
+    fetch("/api/client-meta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(client),
+    });
   }, [client]);
 
-  return null; // no UI
+  return null; // hidden component
 }
