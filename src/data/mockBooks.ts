@@ -1,4 +1,4 @@
-// src/data/mockBooks.ts
+// src\data\mockBooks.ts
 export const mockBooks = [
   { title: "Atomic Habits" },
   { title: "The Psychology of Money" },

@@ -1,17 +1,10 @@
+// src\components\Header.tsx
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import SearchBar from "./SearchBar";
-import {
-  ShoppingCart,
-  LogIn,
-  Moon,
-  Sun,
-  ChevronDown,
-  Mail,
-  Phone,
-} from "lucide-react";
+import { LogIn, Moon, Sun, ChevronDown, Mail, Phone } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 

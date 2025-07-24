@@ -72,9 +72,7 @@ export default function ChatBotUI() {
       const replyText = data.replies?.[0]?.reply || "🤖 No response received.";
 
       // Remove typing bubble before adding actual reply
-      setMessages((prev) =>
-        [...prev].filter((m) => m.id !== "typing")
-      );
+      setMessages((prev) => [...prev].filter((m) => m.id !== "typing"));
 
       const botMsg: Message = {
         id: crypto.randomUUID(),
@@ -85,10 +83,9 @@ export default function ChatBotUI() {
 
       setMessages((prev) => [...prev, botMsg]);
     } catch (error) {
+      console.error("❌ Failed to send message to backend:", error);
       // Remove typing bubble
-      setMessages((prev) =>
-        [...prev].filter((m) => m.id !== "typing")
-      );
+      setMessages((prev) => [...prev].filter((m) => m.id !== "typing"));
 
       setMessages((prev) => [
         ...prev,
@@ -116,10 +113,7 @@ export default function ChatBotUI() {
 
       {/* Input */}
       <div className="border-t pt-2 dark:border-white/10">
-        <ChatInput
-          onSend={handleSend}
-          fileInputRef={fileInputRef}
-        />
+        <ChatInput onSend={handleSend} fileInputRef={fileInputRef} />
       </div>
     </div>
   );
