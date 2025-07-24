@@ -1,3 +1,4 @@
+// src\components\ChatInput.tsx
 "use client";
 
 import { Send, UploadCloud, X } from "lucide-react";

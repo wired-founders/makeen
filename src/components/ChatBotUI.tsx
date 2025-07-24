@@ -47,20 +47,21 @@ export default function ChatBotUI() {
     setMessages((prev) => [...prev, typingMsg]);
 
     try {
-      let sessionId = localStorage.getItem("chat_session_id");
-      if (!sessionId) {
-        sessionId = crypto.randomUUID();
-        localStorage.setItem("chat_session_id", sessionId);
+      let userId = localStorage.getItem("chat_user_id");
+      if (!userId) {
+        userId = crypto.randomUUID();
+        localStorage.setItem("chat_user_id", userId);
         await fetch("/api/session-init", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
+          body: JSON.stringify({ userId }),
         });
       }
 
       const formData = new FormData();
       formData.append("message", msg.content.trim());
-      formData.append("sessionId", sessionId);
+      formData.append("userId", userId);
+      formData.append("platform", "web");
       if (msg.file) formData.append("file", msg.file);
 
       const response = await fetch("http://localhost:4000/api/chat", {

@@ -1,7 +1,7 @@
-// src/middleware.ts
+// src\middleware.ts
 import { NextRequest, NextResponse } from "next/server";
 
-interface IpInfo {
+export interface IpInfo {
   city?: string;
   region?: string;
   country?: string;
