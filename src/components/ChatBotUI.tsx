@@ -64,10 +64,13 @@ export default function ChatBotUI() {
       formData.append("platform", "web");
       if (msg.file) formData.append("file", msg.file);
 
-      const response = await fetch("http://localhost:4000/api/chat", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/chat`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       const data = await response.json();
       const replyText = data.replies?.[0]?.reply || "🤖 No response received.";
