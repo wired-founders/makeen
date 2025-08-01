@@ -1,3 +1,4 @@
+// src\hooks\useChatSession.ts
 import { useEffect } from "react";
 
 export function useChatSession() {
