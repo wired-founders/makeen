@@ -1,6 +1,6 @@
 // src\middleware.ts
 import { NextRequest, NextResponse } from "next/server";
-
+import { IPINFO_TOKEN, BACKEND_URL } from "@/config/env";
 export interface IpInfo {
   city?: string;
   region?: string;
@@ -14,7 +14,7 @@ export async function middleware(req: NextRequest) {
     req.headers.get("x-real-ip") ??
     "8.8.8.8"; // fallback for localhost/dev
 
-  const res = await fetch(`https://ipinfo.io/lite/${ip}?token=${process.env.IPINFO_TOKEN}`);
+  const res = await fetch(`https://ipinfo.io/lite/${ip}?token=${IPINFO_TOKEN}`);
   const geo = (await res.json()) as IpInfo;
 
   console.log("🌍 Geo Info:", {

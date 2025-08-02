@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/styles/globals.css";
 import { ThemeProvider } from "next-themes";
-import ClientTracker from "@/components/analyticss/ClientTracker";
+//import ClientTracker from "@/components/analyticss/ClientTracker";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -27,7 +27,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black dark:bg-black dark:text-white`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <ClientTracker />
+          {/* <ClientTracker /> */}
           <main className="min-h-screen">{children}</main>
         </ThemeProvider>
       </body>
