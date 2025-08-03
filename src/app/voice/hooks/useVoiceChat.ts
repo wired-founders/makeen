@@ -1,132 +1,145 @@
 // src\app\voice\hooks\useVoiceChat.ts
 import { useEffect, useRef, useState } from "react";
-import { DEEPGRAM_API_KEY, BACKEND_URL } from "@/config/env";
-
-type Message = { type: "user" | "bot"; content: string };
+import { BACKEND_URL } from "@/config/env";
+import { setupWebSocket } from "@/utils/setupWebSocket";
+import { handleSocketMessage } from "@/utils/handleSocketMessage";
+import { Message } from "../types/voice-types";
+import { playBase64Audio } from "@/utils/playBase64Audio";
+import { playAudioChunk } from "@/utils/playAudioChunk";
 
 export function useVoiceChat(recording: boolean) {
   const [messages, setMessages] = useState<Message[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Uint8Array[]>([]);
 
   useEffect(() => {
-    if (!recording) {
-      console.log("⏹ Recording is off.");
-      return;
-    }
-
-    console.log("🎙️ Voice recording started...");
+    if (!recording) return;
 
     const start = async () => {
       try {
-        console.log("🔄 Requesting mic access...");
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-        console.log("✅ Mic access granted");
-
-        const audioCtx = new AudioContext();
-        audioCtxRef.current = audioCtx;
-
-        console.log("📦 Loading mic-processor.js...");
-        await audioCtx.audioWorklet.addModule("/mic-processor.js");
-        console.log("✅ Audio worklet loaded");
-
-        const source = audioCtx.createMediaStreamSource(stream);
-        const micNode = new AudioWorkletNode(audioCtx, "mic-processor");
-
-        micNode.port.onmessage = (e) => {
-          const { audio } = e.data;
-          if (socketRef.current?.readyState === WebSocket.OPEN) {
-            const float32Array = new Float32Array(audio);
-            socketRef.current.send(float32Array.buffer);
-            console.log("📤 Audio chunk sent to Deepgram");
-          }
-        };
-
-        source.connect(micNode).connect(audioCtx.destination);
-        console.log("🔊 Audio nodes connected");
-
-        const socket = new WebSocket(
-          `wss://api.deepgram.com/v1/listen?punctuate=true&interim_results=true&language=en&token=${DEEPGRAM_API_KEY}`
+        const socket = setupWebSocket(
+          `${BACKEND_URL.replace(/^http/, "ws")}/voice/deepgram-stream`
         );
-
         socketRef.current = socket;
 
-        socket.onopen = () => {
-          console.log("🔗 Deepgram socket open — sending auth");
+        // Simple audio element for playback
+        audioRef.current = new Audio();
+        audioRef.current.autoplay = true;
 
-          socket.send(
-            JSON.stringify({
-              type: "config",
-              token: DEEPGRAM_API_KEY,
-            })
-          );
+        socket.onopen = async () => {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              sampleRate: 16000,
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+            },
+          });
+          streamRef.current = stream;
+
+          const audioCtx = new AudioContext({ sampleRate: 16000 });
+          audioCtxRef.current = audioCtx;
+
+          await audioCtx.audioWorklet.addModule("/mic-processor.js");
+
+          const source = audioCtx.createMediaStreamSource(stream);
+          const micNode = new AudioWorkletNode(audioCtx, "mic-processor");
+
+          micNode.port.onmessage = (e) => {
+            const { audio } = e.data;
+
+            if (socket.readyState === WebSocket.OPEN && audio.byteLength > 0) {
+              socket.send(audio);
+            }
+          };
+
+          source.connect(micNode);
         };
 
-        socketRef.current = socket;
+        socket.onmessage = (event) => {
+          if (event.data instanceof ArrayBuffer) {
+            // ✅ Directly stream ArrayBuffer
 
-        socket.onopen = () => {
-          console.log("🔗 Connected to Deepgram WebSocket");
+            playAudioChunk(event.data);
+          } else if (event.data instanceof Blob) {
+            // ✅ Convert Blob → ArrayBuffer → stream
+            console.log("🔊 Received audio blob:", event.data.size, "bytes");
+            event.data
+              .arrayBuffer()
+              .then((buffer) => {
+                playAudioChunk(buffer); // ← real-time streaming
+              })
+              .catch((err) => {
+                console.error("❌ Blob processing failed:", err);
+              });
+          } else if (typeof event.data === "string") {
+            try {
+              const json = JSON.parse(event.data);
+
+              if (json.type === "reply") {
+                handleSocketMessage(json, setMessages);
+              } else if (json.type === "audio") {
+                playBase64Audio(json.data, audioRef.current);
+                const binary = atob(json.data);
+                const buffer = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                  buffer[i] = binary.charCodeAt(i);
+                }
+                playAudioChunk(buffer.buffer, audioRef.current!); // ✅
+              }
+            } catch (err) {
+              console.error("❌ JSON parse failed:", event.data, err);
+            }
+          } else {
+            console.warn("❓ Unknown data type:", event.data);
+          }
         };
 
         socket.onerror = (err) => {
-          console.error("❌ Deepgram WebSocket error:", err);
+          console.error("❌ WebSocket error details:", {
+            error: err,
+            readyState: socket.readyState,
+            url: socket.url,
+          });
         };
 
-        socket.onmessage = async (msg) => {
-          const dg = JSON.parse(msg.data);
-          const t = dg.channel?.alternatives?.[0]?.transcript;
-
-          if (!t?.length) return;
-          console.log("📝 Transcript received:", t);
-
-          setMessages((prev) => [...prev, { type: "user", content: t }]);
-
-          try {
-            const chatRes = await fetch(`${BACKEND_URL}/api/voice`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                message: t,
-                userId: "voice-user",
-                platform: "web",
-              }),
-            });
-
-            const chatData = await chatRes.json();
-            const botReply = chatData.replies?.[0]?.reply || "🤖 No reply";
-            console.log("🤖 Bot replied:", botReply);
-
-            setMessages((prev) => [
-              ...prev,
-              { type: "bot", content: botReply },
-            ]);
-
-            const audioRes = await fetch(`${BACKEND_URL}/api/tts`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text: botReply }),
-            });
-
-            const audioBlob = await audioRes.blob();
-            console.log("🔊 Playing TTS audio");
-            new Audio(URL.createObjectURL(audioBlob)).play();
-          } catch (err) {
-            console.error("❌ Failed to fetch or play bot reply:", err);
-          }
+        socket.onclose = (event) => {
+          console.log("🔴 WebSocket closed:", {
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean,
+          });
         };
-      } catch (error) {
-        console.error("❌ Voice chat setup error:", error);
+      } catch (err) {
+        console.error("❌ Voice chat setup failed:", err);
       }
     };
 
     start();
 
     return () => {
-      console.log("🧹 Cleaning up voice session...");
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
       socketRef.current?.close();
       audioCtxRef.current?.close();
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        if (audioRef.current.src) {
+          URL.revokeObjectURL(audioRef.current.src);
+        }
+      }
+      // Clear refs
+      streamRef.current = null;
+      socketRef.current = null;
+      audioCtxRef.current = null;
+      audioRef.current = null;
+      audioChunksRef.current = [];
     };
   }, [recording]);
 

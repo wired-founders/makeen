@@ -1,4 +1,4 @@
-// src/app/voice/page.tsx
+// src\app\voice\components\VoiceChatBox.tsx
 "use client";
 
 import { useState } from "react";
