@@ -2,10 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { BACKEND_URL } from "@/config/env";
 import { setupWebSocket } from "@/utils/setupWebSocket";
-import { handleSocketMessage } from "@/utils/handleSocketMessage";
 import { Message } from "../types/voice-types";
-import { playBase64Audio } from "@/utils/playBase64Audio";
-import { playAudioChunk } from "@/utils/playAudioChunk";
+
+import { handleVoiceSocketMessage } from "@/utils/handleVoiceSocketMessage";
 
 export function useVoiceChat(recording: boolean) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -26,8 +25,6 @@ export function useVoiceChat(recording: boolean) {
         socketRef.current = socket;
 
         // Simple audio element for playback
-        audioRef.current = new Audio();
-        audioRef.current.autoplay = true;
 
         socket.onopen = async () => {
           const stream = await navigator.mediaDevices.getUserMedia({
@@ -60,42 +57,7 @@ export function useVoiceChat(recording: boolean) {
         };
 
         socket.onmessage = (event) => {
-          if (event.data instanceof ArrayBuffer) {
-            // ✅ Directly stream ArrayBuffer
-
-            playAudioChunk(event.data);
-          } else if (event.data instanceof Blob) {
-            // ✅ Convert Blob → ArrayBuffer → stream
-            console.log("🔊 Received audio blob:", event.data.size, "bytes");
-            event.data
-              .arrayBuffer()
-              .then((buffer) => {
-                playAudioChunk(buffer); // ← real-time streaming
-              })
-              .catch((err) => {
-                console.error("❌ Blob processing failed:", err);
-              });
-          } else if (typeof event.data === "string") {
-            try {
-              const json = JSON.parse(event.data);
-
-              if (json.type === "reply") {
-                handleSocketMessage(json, setMessages);
-              } else if (json.type === "audio") {
-                playBase64Audio(json.data, audioRef.current);
-                const binary = atob(json.data);
-                const buffer = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) {
-                  buffer[i] = binary.charCodeAt(i);
-                }
-                playAudioChunk(buffer.buffer, audioRef.current!); // ✅
-              }
-            } catch (err) {
-              console.error("❌ JSON parse failed:", event.data, err);
-            }
-          } else {
-            console.warn("❓ Unknown data type:", event.data);
-          }
+          handleVoiceSocketMessage(event, audioRef.current, setMessages);
         };
 
         socket.onerror = (err) => {

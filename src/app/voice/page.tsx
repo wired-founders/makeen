@@ -11,7 +11,7 @@ export default function VoiceChatPage() {
       <VoiceHeader />
 
       {/* Hero Section */}
-      <section className="text-center px-6 sm:px-12 pt-28 pb-16">
+      <section className="text-center px-6 sm:px-8 pt-18 pb-16">
         <h1 className="text-4xl sm:text-6xl font-bold leading-tight tracking-tight max-w-4xl mx-auto mb-6">
           Talk to Your AI Book Assistant
         </h1>
