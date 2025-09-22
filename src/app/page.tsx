@@ -3,42 +3,14 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-
-const agents = [
-  {
-    title: "Landing Page Agent",
-    slug: "landing-page",
-    desc: "Auto-generates high-performing variants based on real-time funnel data.",
-  },
-  {
-    title: "Audience Agent",
-    slug: "audience",
-    desc: "Identifies and segments visitors live — and adapts copy and creative instantly.",
-  },
-  {
-    title: "Split-Test Agent",
-    slug: "split-test",
-    desc: "Launches multivariate tests without setup or dashboards. Learns what converts.",
-  },
-  {
-    title: "Analytics Agent",
-    slug: "analytics",
-    desc: "Tracks ROAS, conversions, drop-off, and notifies you of performance drops.",
-  },
-];
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.4 },
-  }),
-};
+import Header from "../components/layout/Header";
+import { agents } from "@/data/agents";
+import { fadeUp } from "@/lib/motion";
 
 export default function AgentHome() {
   return (
     <div className="min-h-screen bg-[#f5f5f5] dark:bg-black text-black dark:text-white font-sans">
+      <Header />
       {/* Hero */}
       <section className="text-center px-6 sm:px-12 pt-28 pb-16">
         <motion.h1

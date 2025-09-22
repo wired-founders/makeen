@@ -1,4 +1,4 @@
-// src\components\analyticss\ClientTracker.tsx
+// src\components\analytics\ClientTracker.tsx
 "use client";
 
 import { useClientInfo } from "@/hooks/useClientInfo";
