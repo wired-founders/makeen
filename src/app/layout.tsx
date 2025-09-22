@@ -5,12 +5,17 @@ import { metadata } from "@/lib/metadata/metadata";
 import { geistSans, geistMono } from "@/fonts/fonts";
 import GTMProvider from "@/components/analytics/GTMProvider";
 import Script from "next/script";
+import { Suspense } from "react";
 
 export { metadata };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID; // no non-null assertion
-console.log(GTM_ID);
+  console.log(GTM_ID);
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -31,7 +36,9 @@ console.log(GTM_ID);
           </Script>
         )}
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black dark:bg-black dark:text-white`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black dark:bg-black dark:text-white`}
+      >
         {/* GTM noscript (required) */}
         {GTM_ID && (
           <noscript>
@@ -45,8 +52,11 @@ console.log(GTM_ID);
         )}
 
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {/* Track SPA route changes */}
-          {GTM_ID && <GTMProvider />}
+          {GTM_ID && (
+            <Suspense fallback={null}>
+              <GTMProvider />
+            </Suspense>
+          )}
           <main className="min-h-screen">{children}</main>
         </ThemeProvider>
       </body>
